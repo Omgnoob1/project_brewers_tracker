@@ -8,6 +8,7 @@ class BrewersTeam:
         self.data = None
         self.live_data = None
 
+        #MLB API to pull the JSON data
         url = "https://statsapi.mlb.com/api/v1/schedule"
         params = {
             "sportId": self.sport_id,
@@ -16,7 +17,7 @@ class BrewersTeam:
         }
 
         response = requests.get(url, params=params)
-
+        #Code 200 is successful, send friendly fail message for anything else
         if response.status_code != 200:
             print(f"Request failed with status {response.status_code}")
         else:
@@ -26,6 +27,7 @@ class BrewersTeam:
             else:
                 self.data = data
 
+    #Function is called within main.py and handles the non-live formatting
     def getscores(self):
         game = self.data["dates"][0]["games"][0]
 
@@ -35,7 +37,7 @@ class BrewersTeam:
         home_score = game["teams"]["home"].get("score", 0)
         status = game["status"]["detailedState"]
         venue = game["venue"]["name"]
-
+        print(f"{self.__str__()}")
         print(f"{away_team} @ {home_team}")
         print(f"Venue: {venue}")
         print(f"Status: {status}")
@@ -43,11 +45,12 @@ class BrewersTeam:
         if self.fetch_live_data():
             self.print_current_state()
 
+    #Simply displays text with date for game
     def __str__(self):
         return f"BrewersTeam tracker on {self.date}"
 
+    #Function handles the live game data API
     def fetch_live_data(self):
-        """Fetches the live feed once and stores it. Call this before using any get_current_* methods."""
         game = self.data["dates"][0]["games"][0]
         game_pk = game["gamePk"]
 
@@ -81,8 +84,8 @@ class BrewersTeam:
         return self.live_data["liveData"]["boxscore"]["teams"][defense_side]["players"][f"ID{pitcher_id}"]["stats"][
             "pitching"]["numberOfPitches"]
 
+    #Prints current state of game, if game hasn't started yet it will stop the function from erroring out
     def print_current_state(self):
-        """The formatter — calls the small getters and displays everything together."""
         status = self.data["dates"][0]["games"][0]["status"]["detailedState"]
         if status in ("Scheduled", "Pre-Game", "Warmup"):
             print(f"Game hasn't started yet ({status}).")
@@ -101,13 +104,14 @@ class BrewersTeam:
             print(f"Final play: {event} — {description}")
             return
 
+    #Gets and displays the final play of the game, if it has happened
     def get_final_play(self):
         plays = self.live_data["liveData"]["plays"]["allPlays"]
         last_play = plays[-1]
         return last_play["result"]["event"], last_play["result"]["description"]
 
+    #Gets the current runners on base, used in print_diamond function for displaying the field in ASCII
     def get_runners(self):
-        """Returns a list of occupied bases, e.g. ['2B'] or ['1B', '3B']"""
         offense = self.live_data["liveData"]["linescore"]["offense"]
         runners = []
         if "first" in offense:
@@ -118,6 +122,7 @@ class BrewersTeam:
             runners.append("3B")
         return runners
 
+    #Create Baseball diamond with runners names shown if they are on base
     def print_diamond(self):
         runners = self.get_runners()
         print(f"        {'[2B]' if '2B' in runners else ' -- '}")
